@@ -19,7 +19,6 @@ const Navbar = ({ refreshCommunities }) => {
         return (names[0][0] + names[1][0]).toUpperCase();
     };
 
-    // Create community
     const handleCreateCommunity = async () => {
         if (!name) return setSuccessMsg("❌ Community name is required");
 
@@ -60,10 +59,9 @@ const Navbar = ({ refreshCommunities }) => {
             <h2>My Niche Community</h2>
 
             <div className="navbar-right">
-                <button onClick={() => setShowModal(true)}>Create Community</button>
-                <button onClick={logout}>Logout</button>
+                <button className="primary-btn" onClick={() => setShowModal(true)}>Create Community</button>
+                <button className="secondary-btn" onClick={logout}>Logout</button>
 
-                {/* Avatar next to Logout */}
                 <div
                     className="avatar"
                     onClick={() => navigate("/profile")}
@@ -73,27 +71,108 @@ const Navbar = ({ refreshCommunities }) => {
                 </div>
             </div>
 
-            {/* Toast message */}
             {successMsg && <div className="toast-message">{successMsg}</div>}
 
-            {/* Create Community Modal */}
             {showModal && (
-                <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                        <h3>Create New Community</h3>
+                <div
+                    className="modal-overlay"
+                    style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        width: "100vw",
+                        height: "100vh",
+                        backgroundColor: "rgba(0,0,0,0.5)",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        zIndex: 1000,
+                    }}
+                    onClick={() => setShowModal(false)}
+                >
+                    <div
+                        className="modal-content"
+                        style={{
+                            backgroundColor: "#fff",
+                            padding: "2rem",
+                            borderRadius: "12px",
+                            minWidth: "360px",
+                            maxWidth: "480px",
+                            boxShadow: "0 8px 20px rgba(0,0,0,0.25)",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "1rem",
+                            animation: "fadeIn 0.3s ease",
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 style={{ marginBottom: "0.5rem" }}>Create New Community</h3>
+
                         <input
                             type="text"
                             placeholder="Community Name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
+                            style={{
+                                padding: "0.75rem",
+                                borderRadius: "8px",
+                                border: "1px solid #ccc",
+                                fontSize: "1rem",
+                                width: "100%",
+                            }}
                         />
+
                         <textarea
                             placeholder="Description (optional)"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
+                            style={{
+                                padding: "0.75rem",
+                                borderRadius: "8px",
+                                border: "1px solid #ccc",
+                                fontSize: "1rem",
+                                width: "100%",
+                                minHeight: "80px",
+                                resize: "vertical",
+                            }}
                         />
-                        <button onClick={handleCreateCommunity}>Create</button>
-                        <button onClick={() => setShowModal(false)}>Cancel</button>
+
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+                            <button
+                                onClick={handleCreateCommunity}
+                                style={{
+                                    padding: "0.6rem 1.2rem",
+                                    backgroundColor: "#4CAF50",
+                                    color: "#fff",
+                                    border: "none",
+                                    borderRadius: "8px",
+                                    cursor: "pointer",
+                                    fontWeight: "600",
+                                    transition: "background-color 0.2s",
+                                }}
+                                onMouseOver={(e) => e.target.style.backgroundColor = "#45a049"}
+                                onMouseOut={(e) => e.target.style.backgroundColor = "#4CAF50"}
+                            >
+                                Create
+                            </button>
+                            <button
+                                onClick={() => setShowModal(false)}
+                                style={{
+                                    padding: "0.6rem 1.2rem",
+                                    backgroundColor: "#f44336",
+                                    color: "#fff",
+                                    border: "none",
+                                    borderRadius: "8px",
+                                    cursor: "pointer",
+                                    fontWeight: "600",
+                                    transition: "background-color 0.2s",
+                                }}
+                                onMouseOver={(e) => e.target.style.backgroundColor = "#da190b"}
+                                onMouseOut={(e) => e.target.style.backgroundColor = "#f44336"}
+                            >
+                                Cancel
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext.jsx";
 import Navbar from "../components/Navbar.jsx";
-import { baseURL } from "../components/utils.js"; // import baseURL
+import { BASE_URL } from "../components/utils.js"; // import baseURL
 
 const PostPage = () => {
     const { id } = useParams(); // post ID from URL
@@ -22,7 +22,7 @@ const PostPage = () => {
             try {
                 setLoading(true);
                 // Fetch post
-                const resPost = await fetch(`${baseURL}/api/posts/${id}`, {
+                const resPost = await fetch(`${BASE_URL}/api/posts/${id}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 const postData = await resPost.json();
@@ -36,7 +36,7 @@ const PostPage = () => {
                 setPost(postData.post || postData); // adjust based on backend response
 
                 // Fetch comments
-                const resComments = await fetch(`${baseURL}/api/comments/${id}`, {
+                const resComments = await fetch(`${BASE_URL}/api/comments/${id}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 const commentsData = await resComments.json();
@@ -57,7 +57,7 @@ const PostPage = () => {
         if (!newComment.trim()) return;
 
         try {
-            const res = await fetch(`${baseURL}/api/comments`, {
+            const res = await fetch(`${BASE_URL}/api/comments`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -83,7 +83,7 @@ const PostPage = () => {
         if (!window.confirm("Are you sure you want to delete this comment?")) return;
 
         try {
-            const res = await fetch(`${baseURL}/api/comments/${commentId}`, {
+            const res = await fetch(`${BASE_URL}/api/comments/${commentId}`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
             });

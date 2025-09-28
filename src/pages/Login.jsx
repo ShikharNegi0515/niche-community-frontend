@@ -1,7 +1,7 @@
 import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext.jsx";
-import { baseURL } from "../components/utils.js"; // import baseURL
+import { BASE_URL } from "../components/utils.js"; 
 
 const Login = () => {
     const navigate = useNavigate();
@@ -14,7 +14,7 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`${baseURL}/api/auth/login`, {
+            const res = await fetch(`${BASE_URL}/api/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(formData),
