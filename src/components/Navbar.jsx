@@ -1,6 +1,7 @@
 import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext.jsx";
+import { BASE_URL } from "./utils.js";
 
 const Navbar = ({ refreshCommunities }) => {
     const { logout, user } = useContext(AuthContext);
@@ -11,7 +12,6 @@ const Navbar = ({ refreshCommunities }) => {
     const [description, setDescription] = useState("");
     const [successMsg, setSuccessMsg] = useState("");
 
-    // Helper to get initials from username
     const getInitials = (username) => {
         if (!username) return "?";
         const names = username.split(" ");
@@ -27,7 +27,7 @@ const Navbar = ({ refreshCommunities }) => {
         if (!token) return setSuccessMsg("❌ User not logged in");
 
         try {
-            const res = await fetch("http://localhost:5000/api/communities", {
+            const res = await fetch(`${BASE_URL}/api/communities`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

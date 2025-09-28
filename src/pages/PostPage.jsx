@@ -2,6 +2,7 @@ import React, { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext.jsx";
 import Navbar from "../components/Navbar.jsx";
+import { baseURL } from "../components/utils.js"; // import baseURL
 
 const PostPage = () => {
     const { id } = useParams(); // post ID from URL
@@ -21,7 +22,7 @@ const PostPage = () => {
             try {
                 setLoading(true);
                 // Fetch post
-                const resPost = await fetch(`http://localhost:5000/api/posts/${id}`, {
+                const resPost = await fetch(`${baseURL}/api/posts/${id}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 const postData = await resPost.json();
@@ -35,7 +36,7 @@ const PostPage = () => {
                 setPost(postData.post || postData); // adjust based on backend response
 
                 // Fetch comments
-                const resComments = await fetch(`http://localhost:5000/api/comments/${id}`, {
+                const resComments = await fetch(`${baseURL}/api/comments/${id}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 const commentsData = await resComments.json();
@@ -56,7 +57,7 @@ const PostPage = () => {
         if (!newComment.trim()) return;
 
         try {
-            const res = await fetch(`http://localhost:5000/api/comments`, {
+            const res = await fetch(`${baseURL}/api/comments`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -82,7 +83,7 @@ const PostPage = () => {
         if (!window.confirm("Are you sure you want to delete this comment?")) return;
 
         try {
-            const res = await fetch(`http://localhost:5000/api/comments/${commentId}`, {
+            const res = await fetch(`${baseURL}/api/comments/${commentId}`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
             });

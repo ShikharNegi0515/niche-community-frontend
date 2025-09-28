@@ -1,6 +1,7 @@
 import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext.jsx";
+import { BASE_URL } from "../components/utils.js";
 
 const Signup = () => {
     const navigate = useNavigate();
@@ -17,7 +18,7 @@ const Signup = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch("http://localhost:5000/api/auth/signup", {
+            const res = await fetch(`${BASE_URL}/api/auth/signup`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(formData),
@@ -28,13 +29,13 @@ const Signup = () => {
                 alert("Signup successful! Please login.");
                 navigate("/login");
             } else {
-                alert(data.message);
+                alert(data.message || "Signup failed");
             }
         } catch (err) {
             console.error(err);
+            alert("Something went wrong. Please try again.");
         }
     };
-
 
     return (
         <div className="auth-page">
@@ -68,7 +69,8 @@ const Signup = () => {
                     <button type="submit">Sign Up</button>
                 </form>
                 <p>
-                    Already have an account? <span onClick={() => navigate("/login")}>Login</span>
+                    Already have an account?{" "}
+                    <span onClick={() => navigate("/login")}>Login</span>
                 </p>
             </div>
         </div>

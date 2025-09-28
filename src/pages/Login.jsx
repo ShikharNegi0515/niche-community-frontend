@@ -1,6 +1,7 @@
 import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext.jsx";
+import { baseURL } from "../components/utils.js"; // import baseURL
 
 const Login = () => {
     const navigate = useNavigate();
@@ -13,7 +14,7 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch("http://localhost:5000/api/auth/login", {
+            const res = await fetch(`${baseURL}/api/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(formData),
@@ -22,7 +23,7 @@ const Login = () => {
             if (res.ok) {
                 setUser(data.user);
                 localStorage.setItem("user", JSON.stringify(data.user));
-                localStorage.setItem("token", data.token); // <-- store token for auth requests
+                localStorage.setItem("token", data.token); // store token for auth requests
                 navigate("/dashboard");
             } else {
                 alert(data.message);
@@ -56,7 +57,8 @@ const Login = () => {
                     <button type="submit">Login</button>
                 </form>
                 <p>
-                    Don't have an account? <span onClick={() => navigate("/signup")}>Sign up</span>
+                    Don't have an account?{" "}
+                    <span onClick={() => navigate("/signup")}>Sign up</span>
                 </p>
             </div>
         </div>

@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../context/AuthContext.jsx";
+import { BASE_URL } from "../components/utils.js";
 
 const Profile = () => {
     const { user, setUser } = useContext(AuthContext);
@@ -7,7 +8,7 @@ const Profile = () => {
 
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
-    const [avatar, setAvatar] = useState(""); // For profile picture
+    const [avatar, setAvatar] = useState("");
     const [preview, setPreview] = useState("");
 
     useEffect(() => {
@@ -19,7 +20,6 @@ const Profile = () => {
         }
     }, [user]);
 
-    // Handle avatar preview
     const handleAvatarChange = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -28,7 +28,6 @@ const Profile = () => {
         }
     };
 
-    // Update profile
     const handleUpdate = async (e) => {
         e.preventDefault();
         const formData = new FormData();
@@ -37,7 +36,7 @@ const Profile = () => {
         if (avatar) formData.append("avatar", avatar);
 
         try {
-            const res = await fetch("http://localhost:5000/api/users/profile", {
+            const res = await fetch(`${BASE_URL}/api/users/profile`, {
                 method: "PUT",
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -48,7 +47,7 @@ const Profile = () => {
             const data = await res.json();
             if (res.ok) {
                 alert("Profile updated successfully");
-                setUser(data); // update context
+                setUser(data);
             } else {
                 alert(data.message);
             }

@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext.jsx";
 import Navbar from "../components/Navbar.jsx";
+import { BASE_URL } from "../components/utils.js"; // ✅ Import BASE_URL
 
 const Dashboard = () => {
     const { user } = useContext(AuthContext);
@@ -19,7 +20,7 @@ const Dashboard = () => {
     // Fetch all communities
     const fetchCommunities = async () => {
         try {
-            const res = await fetch("http://localhost:5000/api/communities", {
+            const res = await fetch(`${BASE_URL}/api/communities`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const data = await res.json();
@@ -34,9 +35,9 @@ const Dashboard = () => {
         try {
             let url = "";
             if (selectedCommunity === "home") {
-                url = "http://localhost:5000/api/posts/feed";
+                url = `${BASE_URL}/api/posts/feed`;
             } else {
-                url = `http://localhost:5000/api/posts?communityId=${selectedCommunity}`;
+                url = `${BASE_URL}/api/posts?communityId=${selectedCommunity}`;
             }
 
             const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
@@ -64,7 +65,7 @@ const Dashboard = () => {
         }
 
         try {
-            const res = await fetch("http://localhost:5000/api/posts", {
+            const res = await fetch(`${BASE_URL}/api/posts`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -93,7 +94,7 @@ const Dashboard = () => {
     // Join community
     const joinCommunity = async (id) => {
         try {
-            const res = await fetch(`http://localhost:5000/api/communities/${id}/join`, {
+            const res = await fetch(`${BASE_URL}/api/communities/${id}/join`, {
                 method: "POST",
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -115,7 +116,7 @@ const Dashboard = () => {
     // Leave community
     const leaveCommunity = async (id) => {
         try {
-            const res = await fetch(`http://localhost:5000/api/communities/${id}/leave`, {
+            const res = await fetch(`${BASE_URL}/api/communities/${id}/leave`, {
                 method: "POST",
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -126,7 +127,7 @@ const Dashboard = () => {
                         : c
                 );
                 setCommunities(updated);
-                fetchPosts(); // refresh posts after leaving
+                fetchPosts(); 
             } else {
                 const data = await res.json();
                 alert(data.message);
@@ -140,7 +141,7 @@ const Dashboard = () => {
     const deletePost = async (id) => {
         if (!window.confirm("Are you sure you want to delete this post?")) return;
         try {
-            const res = await fetch(`http://localhost:5000/api/posts/${id}`, {
+            const res = await fetch(`${BASE_URL}/api/posts/${id}`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -177,7 +178,10 @@ const Dashboard = () => {
                     <ul>
                         <li>
                             <span
-                                style={{ cursor: "pointer", fontWeight: selectedCommunity === "home" ? "bold" : "normal" }}
+                                style={{
+                                    cursor: "pointer",
+                                    fontWeight: selectedCommunity === "home" ? "bold" : "normal",
+                                }}
                                 onClick={() => setSelectedCommunity("home")}
                             >
                                 Home
@@ -198,11 +202,17 @@ const Dashboard = () => {
                                         {c.name}
                                     </span>
                                     {isMember ? (
-                                        <button style={{ marginLeft: "0.5rem" }} onClick={() => leaveCommunity(c._id)}>
+                                        <button
+                                            style={{ marginLeft: "0.5rem" }}
+                                            onClick={() => leaveCommunity(c._id)}
+                                        >
                                             Leave
                                         </button>
                                     ) : (
-                                        <button style={{ marginLeft: "0.5rem" }} onClick={() => joinCommunity(c._id)}>
+                                        <button
+                                            style={{ marginLeft: "0.5rem" }}
+                                            onClick={() => joinCommunity(c._id)}
+                                        >
                                             Join
                                         </button>
                                     )}

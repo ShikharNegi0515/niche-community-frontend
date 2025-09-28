@@ -1,6 +1,7 @@
 import axios from "axios";
+import { BASE_URL } from "../components/utils.js"; 
 
-const API_URL = "http://localhost:5000/api/communities";
+const API_URL = `${BASE_URL}/api/communities`;
 
 export const getCommunities = async () => {
     const res = await axios.get(API_URL);
