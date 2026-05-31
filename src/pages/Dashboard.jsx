@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext.jsx";
 import Navbar from "../components/Navbar.jsx";
-import { BASE_URL } from "../components/utils.js";
+import { BASE_URL, getCommunityColor } from "../components/utils.js";
 
 const Dashboard = () => {
     const { user } = useContext(AuthContext);
@@ -235,16 +235,28 @@ const Dashboard = () => {
                                 const isCreator = c.creator === user?.id;
                                 const isActive = selectedCommunity === c._id;
                                 
+                                const color = getCommunityColor(c._id);
                                 return (
                                     <li 
                                         key={c._id} 
                                         className={isActive ? "active" : ""}
+                                        style={isActive ? {
+                                            background: color.bg,
+                                            borderColor: color.border,
+                                            color: color.text,
+                                        } : {}}
                                     >
                                         <span
                                             className="sidebar-name"
                                             onClick={() => setSelectedCommunity(c._id)}
+                                            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
                                         >
-                                            🪐 {c.name}
+                                            <span style={{
+                                                width: "9px", height: "9px", borderRadius: "50%",
+                                                background: color.dot, flexShrink: 0,
+                                                boxShadow: `0 0 6px ${color.dot}55`,
+                                            }} />
+                                            {c.name}
                                         </span>
                                         <div className="sidebar-actions">
                                             {isMember ? (
@@ -258,6 +270,7 @@ const Dashboard = () => {
                                                 <button
                                                     className="sidebar-btn join"
                                                     onClick={() => joinCommunity(c._id)}
+                                                    style={{ color: color.text, background: color.bg, border: `1px solid ${color.border}` }}
                                                 >
                                                     Join
                                                 </button>
@@ -359,9 +372,24 @@ const Dashboard = () => {
                                             <span>📅 {new Date(post.createdAt).toLocaleDateString()}</span>
                                         </div>
                                         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                                            <span className="post-tag">
-                                                🪐 {post.community?.name || activeCommunityData?.name || "Feed"}
-                                            </span>
+                                            {(() => {
+                                                const communityId = post.community?._id || selectedCommunity;
+                                                const tagColor = getCommunityColor(communityId);
+                                                return (
+                                                    <span className="post-tag" style={{
+                                                        background: tagColor.bg,
+                                                        color: tagColor.text,
+                                                        border: `1px solid ${tagColor.border}`,
+                                                    }}>
+                                                        <span style={{
+                                                            display: "inline-block", width: "7px", height: "7px",
+                                                            borderRadius: "50%", background: tagColor.dot,
+                                                            marginRight: "5px", verticalAlign: "middle",
+                                                        }} />
+                                                        {post.community?.name || activeCommunityData?.name || "Feed"}
+                                                    </span>
+                                                );
+                                            })()}
                                             {post.user?._id === user?.id && (
                                                 <button
                                                     className="post-delete-btn"
