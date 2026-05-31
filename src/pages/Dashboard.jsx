@@ -232,7 +232,7 @@ const Dashboard = () => {
                         <ul>
                             {communities.map((c) => {
                                 const isMember = c.members.some((m) => m.toString() === user?.id);
-                                const isCreator = c.creator === user?.id;
+                                const isCreator = c.creator?._id === user?.id || c.creator?._id?.toString() === user?.id;
                                 const isActive = selectedCommunity === c._id;
                                 
                                 const color = getCommunityColor(c._id);

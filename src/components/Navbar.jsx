@@ -34,7 +34,7 @@ const Navbar = ({ refreshCommunities }) => {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (res.ok) {
-                const data = await res.ok ? await res.json() : [];
+                const data = await res.json();
                 setNotifications(data);
                 // Calculate unread
                 const unread = data.filter((n) => !n.isRead).length;
