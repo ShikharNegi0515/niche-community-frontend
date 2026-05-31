@@ -1,22 +1,26 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext.jsx";
 import { BASE_URL } from "../components/utils.js";
 
 const Signup = () => {
     const navigate = useNavigate();
-    const { setUser } = useContext(AuthContext);
     const [formData, setFormData] = useState({
         username: "",
         email: "",
         password: "",
     });
+    const [errorMsg, setErrorMsg] = useState("");
+    const [successMsg, setSuccessMsg] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (e) =>
         setFormData({ ...formData, [e.target.name]: e.target.value });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setErrorMsg("");
+        setSuccessMsg("");
+        setLoading(true);
         try {
             const res = await fetch(`${BASE_URL}/api/auth/signup`, {
                 method: "POST",
@@ -26,26 +30,60 @@ const Signup = () => {
             const data = await res.json();
 
             if (res.ok) {
-                alert("Signup successful! Please login.");
-                navigate("/login");
+                setSuccessMsg("🎉 Signup successful! Redirecting to login...");
+                setTimeout(() => navigate("/login"), 2000);
             } else {
-                alert(data.message || "Signup failed");
+                setErrorMsg(data.message || "Signup failed");
             }
         } catch (err) {
             console.error(err);
-            alert("Something went wrong. Please try again.");
+            setErrorMsg("Something went wrong. Please try again.");
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
         <div className="auth-page">
-            <div className="auth-card">
-                <h2>Sign Up</h2>
+            <div className="auth-card glass-panel">
+                <h2>Join NicheSphere</h2>
+                <p>Create an account to build and join amazing communities</p>
+
+                {errorMsg && (
+                    <div style={{
+                        background: "rgba(239, 68, 68, 0.1)",
+                        border: "1px solid rgba(239, 68, 68, 0.2)",
+                        color: "var(--danger)",
+                        padding: "0.75rem",
+                        borderRadius: "10px",
+                        fontSize: "0.9rem",
+                        marginBottom: "1rem",
+                        textAlign: "center"
+                    }}>
+                        ⚠️ {errorMsg}
+                    </div>
+                )}
+
+                {successMsg && (
+                    <div style={{
+                        background: "rgba(16, 185, 129, 0.1)",
+                        border: "1px solid rgba(16, 185, 129, 0.2)",
+                        color: "var(--success)",
+                        padding: "0.75rem",
+                        borderRadius: "10px",
+                        fontSize: "0.9rem",
+                        marginBottom: "1rem",
+                        textAlign: "center"
+                    }}>
+                        {successMsg}
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit}>
                     <input
                         type="text"
                         name="username"
-                        placeholder="Username"
+                        placeholder="Choose Username"
                         value={formData.username}
                         onChange={handleChange}
                         required
@@ -53,7 +91,7 @@ const Signup = () => {
                     <input
                         type="email"
                         name="email"
-                        placeholder="Email"
+                        placeholder="Email Address"
                         value={formData.email}
                         onChange={handleChange}
                         required
@@ -66,9 +104,11 @@ const Signup = () => {
                         onChange={handleChange}
                         required
                     />
-                    <button type="submit">Sign Up</button>
+                    <button type="submit" className="primary-btn" disabled={loading} style={{ justifyContent: "center" }}>
+                        {loading ? "Creating Account..." : "Sign Up"}
+                    </button>
                 </form>
-                <p>
+                <p style={{ marginTop: "1.5rem", marginBottom: 0 }}>
                     Already have an account?{" "}
                     <span onClick={() => navigate("/login")}>Login</span>
                 </p>

@@ -1,1 +1,3 @@
-export const BASE_URL = "https://niche-community-backend.onrender.com";
+export const BASE_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://localhost:3000"
+    : "https://niche-community-backend.onrender.com";

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext.jsx";
 import Navbar from "../components/Navbar.jsx";
-import { BASE_URL } from "../components/utils.js"; // import baseURL
+import { BASE_URL } from "../components/utils.js";
 
 const PostPage = () => {
     const { id } = useParams(); // post ID from URL
@@ -16,31 +16,24 @@ const PostPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    // Fetch post and its comments
+    // Fetch post and its comments (Single highly optimized call)
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                // Fetch post
                 const resPost = await fetch(`${BASE_URL}/api/posts/${id}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                const postData = await resPost.json();
+                const data = await resPost.json();
 
                 if (!resPost.ok) {
-                    setError(postData.message || "Post not found");
+                    setError(data.message || "Post not found");
                     setTimeout(() => navigate("/dashboard"), 2000);
                     return;
                 }
 
-                setPost(postData.post || postData); // adjust based on backend response
-
-                // Fetch comments
-                const resComments = await fetch(`${BASE_URL}/api/comments/${id}`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                const commentsData = await resComments.json();
-                if (resComments.ok) setComments(commentsData);
+                setPost(data.post); 
+                setComments(data.comments || []);
             } catch (err) {
                 console.error(err);
                 setError("Failed to fetch post.");
@@ -68,6 +61,8 @@ const PostPage = () => {
 
             const data = await res.json();
             if (res.ok) {
+                // Attach current user object for immediate UI updates
+                data.user = { _id: user.id, username: user.username };
                 setComments([data, ...comments]);
                 setNewComment("");
             } else {
@@ -98,68 +93,89 @@ const PostPage = () => {
         }
     };
 
-    if (loading) return <p>Loading post...</p>;
-    if (error) return <p>{error}</p>;
-    if (!post) return <p>Post not found.</p>;
+    if (loading) {
+        return (
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
+                <p style={{ fontSize: "1.25rem", color: "var(--text-secondary)" }}>Loading post details...</p>
+            </div>
+        );
+    }
+    
+    if (error) {
+        return (
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", padding: "2rem" }}>
+                <div className="glass-panel" style={{ textAlign: "center", maxWidth: "400px" }}>
+                    <p style={{ fontSize: "1.2rem", color: "var(--danger)" }}>⚠️ {error}</p>
+                    <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>Redirecting you to dashboard...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!post) return null;
 
     return (
         <div className="post-page">
             <Navbar />
-            <div className="post-container">
-                <button onClick={() => navigate("/dashboard")} style={{ marginBottom: "1rem" }}>
+            <div className="post-page-container">
+                <button className="back-btn" onClick={() => navigate("/dashboard")}>
                     ← Back to Dashboard
                 </button>
 
-                <div className="post-card">
-                    <h2>{post.title || "Unknown"}</h2>
-                    <p>{post.content || "No content"}</p>
-                    <small>
-                        By {post.user?.username || "Unknown"} in {post.community?.name || "Unknown"}
-                    </small>
-                </div>
-
-                <div className="comments-section">
-                    <h3>Comments</h3>
-
-                    <div className="add-comment">
-                        <input
-                            type="text"
-                            placeholder="Write a comment..."
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && addComment()}
-                        />
-                        <button onClick={addComment}>Comment</button>
+                <div className="single-post-card">
+                    <h2>{post.title}</h2>
+                    <p>{post.content}</p>
+                    <div className="post-meta" style={{ borderTop: "1px solid rgba(255, 255, 255, 0.05)" }}>
+                        <div className="post-author">
+                            <span>👤 Posted by <strong>{post.user?.username || "Anonymous"}</strong></span>
+                            <span>•</span>
+                            <span>🪐 in <strong>{post.community?.name || "Niche Sphere"}</strong></span>
+                        </div>
+                        <span className="post-tag">
+                            📅 {new Date(post.createdAt).toLocaleDateString()}
+                        </span>
                     </div>
 
-                    {comments.length === 0 ? (
-                        <p>No comments yet.</p>
-                    ) : (
-                        comments.map((comment) => (
-                            <div
-                                key={comment._id}
-                                style={{
-                                    borderTop: "1px solid #ccc",
-                                    padding: "0.5rem 0",
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                }}
-                            >
-                                <div>
-                                    <strong>{comment.user?.username || "Unknown"}:</strong> {comment.content}
-                                </div>
-                                {comment.user?._id === user.id && (
-                                    <button
-                                        style={{ color: "red", marginLeft: "1rem" }}
-                                        onClick={() => deleteComment(comment._id)}
-                                    >
-                                        Delete
-                                    </button>
-                                )}
-                            </div>
-                        ))
-                    )}
+                    {/* Comments Section */}
+                    <div className="comments-section">
+                        <h3>Comments ({comments.length})</h3>
+
+                        <div className="add-comment">
+                            <input
+                                type="text"
+                                placeholder="Share your thoughts on this post..."
+                                value={newComment}
+                                onChange={(e) => setNewComment(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && addComment()}
+                            />
+                            <button className="primary-btn" onClick={addComment}>Comment</button>
+                        </div>
+
+                        <div className="comments-list">
+                            {comments.length === 0 ? (
+                                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", textAlign: "center", padding: "1.5rem 0" }}>
+                                    No comments yet. Start the conversation!
+                                </p>
+                            ) : (
+                                comments.map((comment) => (
+                                    <div key={comment._id} className="comment-card">
+                                        <div className="comment-content">
+                                            <strong>{comment.user?.username || "Anonymous"}:</strong>
+                                            {comment.content}
+                                        </div>
+                                        {(comment.user?._id === user?.id || comment.user === user?.id) && (
+                                            <button
+                                                className="comment-delete-btn"
+                                                onClick={() => deleteComment(comment._id)}
+                                            >
+                                                Delete
+                                            </button>
+                                        )}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext.jsx";
 import Navbar from "../components/Navbar.jsx";
-import { BASE_URL } from "../components/utils.js"; // ✅ Import BASE_URL
+import { BASE_URL } from "../components/utils.js";
 
 const Dashboard = () => {
     const { user } = useContext(AuthContext);
@@ -24,7 +24,9 @@ const Dashboard = () => {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const data = await res.json();
-            setCommunities(data);
+            if (res.ok) {
+                setCommunities(data);
+            }
         } catch (err) {
             console.error(err);
         }
@@ -42,18 +44,24 @@ const Dashboard = () => {
 
             const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
             const data = await res.json();
-            setPosts(data);
+            if (res.ok) {
+                setPosts(data);
+            }
         } catch (err) {
             console.error(err);
         }
     };
 
     useEffect(() => {
-        fetchCommunities();
+        if (user && token) {
+            fetchCommunities();
+        }
     }, [user, token]);
 
     useEffect(() => {
-        fetchPosts();
+        if (token) {
+            fetchPosts();
+        }
     }, [selectedCommunity, token]);
 
     // Create post
@@ -80,6 +88,11 @@ const Dashboard = () => {
 
             const data = await res.json();
             if (res.ok) {
+                // Prepend user username for immediate UI updates
+                data.user = { _id: user.id, username: user.username };
+                const currentComm = communities.find((c) => c._id === selectedCommunity);
+                data.community = { _id: selectedCommunity, name: currentComm ? currentComm.name : "Community" };
+                
                 setPosts([data, ...posts]);
                 setTitle("");
                 setContent("");
@@ -137,6 +150,28 @@ const Dashboard = () => {
         }
     };
 
+    // Delete community (Fixing missing function)
+    const deleteCommunity = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this community? This will delete all its posts!")) return;
+        try {
+            const res = await fetch(`${BASE_URL}/api/communities/${id}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setCommunities(communities.filter((c) => c._id !== id));
+                if (selectedCommunity === id) {
+                    setSelectedCommunity("home");
+                }
+            } else {
+                alert(data.message || "Failed to delete community");
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     // Delete post
     const deletePost = async (id) => {
         if (!window.confirm("Are you sure you want to delete this post?")) return;
@@ -161,119 +196,148 @@ const Dashboard = () => {
         navigate(`/posts/${postId}`);
     };
 
-    // Filter posts by search query
+    // Filter posts by search query safely
     const filteredPosts = posts.filter((post) => {
-        const titleMatch = post.title.toLowerCase().includes(searchQuery.toLowerCase());
-        const userMatch = post.user.username.toLowerCase().includes(searchQuery.toLowerCase());
-        return titleMatch || userMatch;
+        const titleMatch = post.title?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
+        const userMatch = post.user?.username?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
+        const contentMatch = post.content?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
+        return titleMatch || userMatch || contentMatch;
     });
+
+    const activeCommunityData = communities.find((c) => c._id === selectedCommunity);
+    const joinedCommunities = communities.filter((c) => c.members.some((m) => m.toString() === user?.id));
 
     return (
         <div className="dashboard-page">
             <Navbar refreshCommunities={fetchCommunities} />
             <div className="dashboard-container">
+                
                 {/* Sidebar */}
                 <aside className="dashboard-sidebar">
-                    <h3>Communities</h3>
-                    <ul>
-                        <li>
-                            <span
-                                style={{
-                                    cursor: "pointer",
-                                    fontWeight: selectedCommunity === "home" ? "bold" : "normal",
-                                }}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                        <h3>Feeds</h3>
+                        <ul>
+                            <li 
+                                className={selectedCommunity === "home" ? "active" : ""}
                                 onClick={() => setSelectedCommunity("home")}
+                                style={{ cursor: "pointer" }}
                             >
-                                Home
-                            </span>
-                        </li>
-                        {communities.map((c) => {
-                            const isMember = c.members.some((m) => m.toString() === user.id);
-                            const isCreator = c.creator === user.id;
-                            return (
-                                <li key={c._id} style={{ marginBottom: "0.8rem" }}>
-                                    <span
-                                        style={{
-                                            cursor: "pointer",
-                                            fontWeight: selectedCommunity === c._id ? "bold" : "normal",
-                                        }}
-                                        onClick={() => setSelectedCommunity(c._id)}
+                                <span className="sidebar-name">🏠 Personal Feed</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", flex: 1, overflowY: "auto" }}>
+                        <h3>Communities ({communities.length})</h3>
+                        <ul>
+                            {communities.map((c) => {
+                                const isMember = c.members.some((m) => m.toString() === user?.id);
+                                const isCreator = c.creator === user?.id;
+                                const isActive = selectedCommunity === c._id;
+                                
+                                return (
+                                    <li 
+                                        key={c._id} 
+                                        className={isActive ? "active" : ""}
                                     >
-                                        {c.name}
-                                    </span>
-                                    {isMember ? (
-                                        <button
-                                            style={{ marginLeft: "0.5rem" }}
-                                            onClick={() => leaveCommunity(c._id)}
+                                        <span
+                                            className="sidebar-name"
+                                            onClick={() => setSelectedCommunity(c._id)}
                                         >
-                                            Leave
-                                        </button>
-                                    ) : (
-                                        <button
-                                            style={{ marginLeft: "0.5rem" }}
-                                            onClick={() => joinCommunity(c._id)}
-                                        >
-                                            Join
-                                        </button>
-                                    )}
-                                    {isCreator && (
-                                        <button
-                                            style={{ marginLeft: "0.5rem", color: "red" }}
-                                            onClick={() => deleteCommunity(c._id)}
-                                        >
-                                            Delete
-                                        </button>
-                                    )}
-                                </li>
-                            );
-                        })}
-                    </ul>
+                                            🪐 {c.name}
+                                        </span>
+                                        <div className="sidebar-actions">
+                                            {isMember ? (
+                                                <button
+                                                    className="sidebar-btn leave"
+                                                    onClick={() => leaveCommunity(c._id)}
+                                                >
+                                                    Leave
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    className="sidebar-btn join"
+                                                    onClick={() => joinCommunity(c._id)}
+                                                >
+                                                    Join
+                                                </button>
+                                            )}
+                                            {isCreator && (
+                                                <button
+                                                    className="sidebar-btn delete"
+                                                    onClick={() => deleteCommunity(c._id)}
+                                                    title="Delete Community"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            )}
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
                 </aside>
 
                 {/* Main feed content */}
                 <main className="dashboard-main">
-                    <h2>Welcome, {user?.username || "User"}!</h2>
+                    <div className="feed-header-section">
+                        <div>
+                            <h2>
+                                {selectedCommunity === "home" 
+                                    ? "Your Personal Feed" 
+                                    : `🪐 ${activeCommunityData?.name || "Community"}`}
+                            </h2>
+                            {selectedCommunity !== "home" && activeCommunityData?.description && (
+                                <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginTop: "0.25rem" }}>
+                                    {activeCommunityData.description}
+                                </p>
+                            )}
+                        </div>
 
-                    {/* Search */}
-                    <div className="post-search">
-                        <input
-                            type="text"
-                            placeholder="Search posts by title or author..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-
-                    {/* Create post form */}
-                    {selectedCommunity !== "home" && (
-                        <div className="post-form">
-                            <select
-                                value={selectedCommunity}
-                                onChange={(e) => setSelectedCommunity(e.target.value)}
-                            >
-                                <option value="" disabled>
-                                    Select Community
-                                </option>
-                                {communities
-                                    .filter((c) => c.members.some((m) => m.toString() === user.id))
-                                    .map((c) => (
-                                        <option key={c._id} value={c._id}>
-                                            {c.name}
-                                        </option>
-                                    ))}
-                            </select>
+                        {/* Search Input */}
+                        <div className="post-search" style={{ maxWidth: "320px" }}>
                             <input
                                 type="text"
-                                placeholder="Post title"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder="Search posts..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                             />
-                            <textarea
-                                placeholder="Write your post..."
-                                value={content}
-                                onChange={(e) => setContent(e.target.value)}
-                            />
-                            <button onClick={handlePostSubmit}>Post</button>
+                        </div>
+                    </div>
+
+                    {/* Create post form (Only when in a joined community) */}
+                    {selectedCommunity !== "home" && activeCommunityData?.members.some((m) => m.toString() === user?.id) && (
+                        <div className="post-form-panel">
+                            <h3>✨ Share something with {activeCommunityData.name}</h3>
+                            <form className="post-form-grid" onSubmit={handlePostSubmit}>
+                                <input
+                                    type="text"
+                                    placeholder="Catchy title..."
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    required
+                                />
+                                <textarea
+                                    placeholder="What's on your mind? Supports text content..."
+                                    value={content}
+                                    onChange={(e) => setContent(e.target.value)}
+                                    style={{ minHeight: "100px", resize: "vertical" }}
+                                    required
+                                />
+                                <button type="submit" className="primary-btn">Post</button>
+                            </form>
+                        </div>
+                    )}
+
+                    {selectedCommunity !== "home" && !activeCommunityData?.members.some((m) => m.toString() === user?.id) && (
+                        <div className="glass-panel" style={{ textAlign: "center", padding: "2.5rem 1.5rem", marginBottom: "2rem" }}>
+                            <p style={{ color: "var(--text-secondary)", marginBottom: "1rem" }}>
+                                You are not a member of this community yet. Join now to view all posts and create your own!
+                            </p>
+                            <button className="primary-btn" onClick={() => joinCommunity(activeCommunityData._id)}>
+                                Join Community
+                            </button>
                         </div>
                     )}
 
@@ -284,29 +348,44 @@ const Dashboard = () => {
                                 <div
                                     className="post-card"
                                     key={post._id}
-                                    style={{ cursor: "pointer" }}
                                     onClick={() => goToPost(post._id)}
                                 >
                                     <h3>{post.title}</h3>
                                     <p>{post.content}</p>
-                                    <small>
-                                        By {post.user.username} in {post.community.name}
-                                    </small>
-                                    {post.user._id === user.id && (
-                                        <button
-                                            style={{ marginLeft: "0.5rem", color: "red" }}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                deletePost(post._id);
-                                            }}
-                                        >
-                                            Delete
-                                        </button>
-                                    )}
+                                    <div className="post-meta">
+                                        <div className="post-author">
+                                            <span>👤 By <strong>{post.user?.username || "Anonymous"}</strong></span>
+                                            <span>•</span>
+                                            <span>📅 {new Date(post.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                            <span className="post-tag">
+                                                🪐 {post.community?.name || activeCommunityData?.name || "Feed"}
+                                            </span>
+                                            {post.user?._id === user?.id && (
+                                                <button
+                                                    className="post-delete-btn"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        deletePost(post._id);
+                                                    }}
+                                                >
+                                                    Delete
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             ))
                         ) : (
-                            <p>No posts found.</p>
+                            <div className="glass-panel" style={{ textAlign: "center", padding: "3rem 1.5rem", color: "var(--text-secondary)" }}>
+                                <p style={{ fontSize: "1.1rem" }}>No posts found in this feed.</p>
+                                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
+                                    {selectedCommunity === "home" 
+                                        ? "Join some communities and start reading!" 
+                                        : "Be the first one to share a post here!"}
+                                </p>
+                            </div>
                         )}
                     </div>
                 </main>
