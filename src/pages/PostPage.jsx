@@ -93,6 +93,13 @@ const PostPage = () => {
         }
     };
 
+    const getInitials = (username) => {
+        if (!username) return "?";
+        const names = username.trim().split(" ");
+        if (names.length === 1) return names[0][0].toUpperCase();
+        return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+    };
+
     if (loading) {
         return (
             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
@@ -159,9 +166,18 @@ const PostPage = () => {
                             ) : (
                                 comments.map((comment) => (
                                     <div key={comment._id} className="comment-card">
-                                        <div className="comment-content">
-                                            <strong>{comment.user?.username || "Anonymous"}:</strong>
-                                            {comment.content}
+                                        <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start" }}>
+                                            <div className="comment-author-avatar">
+                                                {comment.user?.avatar ? (
+                                                    <img src={comment.user.avatar} alt="avatar" />
+                                                ) : (
+                                                    getInitials(comment.user?.username)
+                                                )}
+                                            </div>
+                                            <div className="comment-body">
+                                                <span className="comment-author-name">{comment.user?.username || "Anonymous"}</span>
+                                                <p className="comment-text">{comment.content}</p>
+                                            </div>
                                         </div>
                                         {(comment.user?._id === user?.id || comment.user === user?.id) && (
                                             <button
