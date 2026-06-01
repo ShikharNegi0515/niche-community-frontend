@@ -1,15 +1,22 @@
-import React, { useContext } from "react";
+import { useContext } from "react";
 import { Navigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext.jsx";
+import LoadingSpinner from "./LoadingSpinner.jsx";
 
-const ProtectedRoute = ({ children }) => {
-    const { user } = useContext(AuthContext);
+export default function ProtectedRoute({ children }) {
+  const { user, loading } = useContext(AuthContext);
 
-    if (!user) {
-        return <Navigate to="/login" replace />;
-    }
+  if (loading) {
+    return (
+      <div className="auth-page">
+        <LoadingSpinner label="Checking session..." />
+      </div>
+    );
+  }
 
-    return children;
-};
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
-export default ProtectedRoute;
+  return children;
+}

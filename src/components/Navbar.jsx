@@ -1,272 +1,215 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext.jsx";
-import { BASE_URL } from "./utils.js";
+import { apiRequest } from "../api/client.js";
+import { useToast } from "../context/ToastContext.jsx";
+import { getInitials, formatRelativeTime } from "./utils.js";
 
-const Navbar = ({ refreshCommunities }) => {
-    const { logout, user } = useContext(AuthContext);
-    const navigate = useNavigate();
+const Navbar = ({ refreshCommunities, onMenuToggle }) => {
+  const { logout, user } = useContext(AuthContext);
+  const { showToast } = useToast();
+  const navigate = useNavigate();
 
-    const [showModal, setShowModal] = useState(false);
-    const [name, setName] = useState("");
-    const [description, setDescription] = useState("");
-    const [successMsg, setSuccessMsg] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [creating, setCreating] = useState(false);
 
-    // Notifications state
-    const [showNotifications, setShowNotifications] = useState(false);
-    const [notifications, setNotifications] = useState([]);
-    const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-    const token = localStorage.getItem("token");
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const data = await apiRequest("/api/notifications");
+      setNotifications(data);
+      setUnreadCount(data.filter((n) => !n.isRead).length);
+    } catch {
+      /* silent when logged out */
+    }
+  }, []);
 
-    const getInitials = (username) => {
-        if (!username) return "?";
-        const names = username.trim().split(" ");
-        if (names.length === 1) return names[0][0].toUpperCase();
-        return (names[0][0] + names[names.length - 1][0]).toUpperCase();
-    };
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 20000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
 
-    // Fetch user notifications
-    const fetchNotifications = async () => {
-        if (!token) return;
-        try {
-            const res = await fetch(`${BASE_URL}/api/notifications`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setNotifications(data);
-                // Calculate unread
-                const unread = data.filter((n) => !n.isRead).length;
-                setUnreadCount(unread);
-            }
-        } catch (err) {
-            console.error("Error fetching notifications:", err);
-        }
-    };
+  const handleCreateCommunity = async () => {
+    if (!name.trim()) {
+      showToast("Community name is required.", "error");
+      return;
+    }
 
-    useEffect(() => {
-        fetchNotifications();
-        // Poll for notifications every 15 seconds
-        const interval = setInterval(fetchNotifications, 15000);
-        return () => clearInterval(interval);
-    }, [token]);
+    setCreating(true);
+    try {
+      await apiRequest("/api/communities", {
+        method: "POST",
+        body: JSON.stringify({ name: name.trim(), description: description.trim() }),
+      });
+      setName("");
+      setDescription("");
+      setShowModal(false);
+      showToast("Community created!", "success");
+      refreshCommunities?.();
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setCreating(false);
+    }
+  };
 
-    const handleCreateCommunity = async () => {
-        if (!name) return setSuccessMsg("❌ Community name is required");
+  const markAsRead = async (id) => {
+    try {
+      await apiRequest(`/api/notifications/${id}/read`, { method: "PUT" });
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
+      );
+      setUnreadCount((c) => Math.max(0, c - 1));
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  };
 
-        if (!token) return setSuccessMsg("❌ User not logged in");
+  const markAllAsRead = async () => {
+    try {
+      await apiRequest("/api/notifications/read-all", { method: "PUT" });
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  };
 
-        try {
-            const res = await fetch(`${BASE_URL}/api/communities`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ name, description }),
-            });
+  const handleNotificationClick = (notification) => {
+    markAsRead(notification._id);
+    setShowNotifications(false);
+    if (notification.link) navigate(notification.link);
+  };
 
-            const data = await res.json();
-            if (res.ok) {
-                setName("");
-                setDescription("");
-                setShowModal(false);
-                setSuccessMsg("✅ Community created successfully!");
-                if (refreshCommunities) refreshCommunities();
-                setTimeout(() => setSuccessMsg(""), 3000);
-            } else {
-                setSuccessMsg(`❌ ${data.message}`);
-                setTimeout(() => setSuccessMsg(""), 3000);
-            }
-        } catch (err) {
-            console.error(err);
-            setSuccessMsg("❌ Error creating community");
-            setTimeout(() => setSuccessMsg(""), 3000);
-        }
-    };
+  return (
+    <nav className="navbar">
+      <div className="navbar-left">
+        {onMenuToggle && (
+          <button type="button" className="menu-toggle-btn" onClick={onMenuToggle} aria-label="Menu">
+            ☰
+          </button>
+        )}
+        <h2 onClick={() => navigate("/dashboard")}>🛸 NicheSphere</h2>
+      </div>
 
-    // Mark notification as read
-    const markAsRead = async (id) => {
-        try {
-            const res = await fetch(`${BASE_URL}/api/notifications/${id}/read`, {
-                method: "PUT",
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            if (res.ok) {
-                setNotifications(
-                    notifications.map((n) => (n._id === id ? { ...n, isRead: true } : n))
-                );
-                setUnreadCount(Math.max(0, unreadCount - 1));
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    };
+      <div className="navbar-right">
+        <div className="nav-controls">
+          <button type="button" className="primary-btn" onClick={() => setShowModal(true)}>
+            ✨ Create Community
+          </button>
 
-    // Mark all as read
-    const markAllAsRead = async () => {
-        try {
-            const res = await fetch(`${BASE_URL}/api/notifications/read-all`, {
-                method: "PUT",
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            if (res.ok) {
-                setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
-                setUnreadCount(0);
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    };
+          <div className="notification-bell-container">
+            <button
+              type="button"
+              className="notification-bell-btn"
+              onClick={() => setShowNotifications(!showNotifications)}
+              title="Notifications"
+            >
+              🔔
+              {unreadCount > 0 && <span className="bell-badge">{unreadCount}</span>}
+            </button>
 
-    const handleNotificationClick = (notification) => {
-        markAsRead(notification._id);
-        setShowNotifications(false);
-        if (notification.link) {
-            navigate(notification.link);
-        }
-    };
-
-    return (
-        <nav className="navbar">
-            <h2 onClick={() => navigate("/dashboard")}>🛸 NicheSphere</h2>
-
-            <div className="navbar-right">
-                <div className="nav-controls">
-                    <button className="primary-btn" onClick={() => setShowModal(true)}>
-                        <span>✨ Create Community</span>
-                    </button>
-
-                    {/* Notification Bell */}
-                    <div className="notification-bell-container">
-                        <button
-                            className="notification-bell-btn"
-                            onClick={() => setShowNotifications(!showNotifications)}
-                            title="Notifications"
-                        >
-                            🔔
-                            {unreadCount > 0 && <span className="bell-badge">{unreadCount}</span>}
-                        </button>
-
-                        {/* Notifications Drawer */}
-                        {showNotifications && (
-                            <div className="notifications-drawer">
-                                <div className="notifications-header">
-                                    <h4>Notifications</h4>
-                                    {unreadCount > 0 && (
-                                        <button className="clear-all-btn" onClick={markAllAsRead}>
-                                            Mark all read
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="notifications-list">
-                                    {notifications.length === 0 ? (
-                                        <div className="no-notifications">No notifications yet</div>
-                                    ) : (
-                                        notifications.map((n) => (
-                                            <div
-                                                key={n._id}
-                                                className={`notification-item ${!n.isRead ? "unread" : ""}`}
-                                                onClick={() => handleNotificationClick(n)}
-                                            >
-                                                <div className="notification-details">
-                                                    <p>{n.message}</p>
-                                                    <span>
-                                                        {new Date(n.createdAt).toLocaleDateString()}{" "}
-                                                        {new Date(n.createdAt).toLocaleTimeString([], {
-                                                            hour: "2-digit",
-                                                            minute: "2-digit",
-                                                        })}
-                                                    </span>
-                                                </div>
-                                                {!n.isRead && <div className="mark-read-indicator"></div>}
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <button className="secondary-btn" onClick={logout}>
-                        Logout
-                    </button>
-                </div>
-
-                {/* Profile Avatar */}
-                <div
-                    className="avatar"
-                    onClick={() => navigate("/profile")}
-                    title="Go to Profile"
-                >
-                    {user?.avatar ? (
-                        <img src={user.avatar} alt="avatar" />
-                    ) : (
-                        getInitials(user?.username)
+            {showNotifications && (
+              <>
+                <button
+                  type="button"
+                  className="notif-backdrop"
+                  aria-label="Close notifications"
+                  onClick={() => setShowNotifications(false)}
+                />
+                <div className="notifications-drawer">
+                  <div className="notifications-header">
+                    <h4>Notifications</h4>
+                    {unreadCount > 0 && (
+                      <button type="button" className="clear-all-btn" onClick={markAllAsRead}>
+                        Mark all read
+                      </button>
                     )}
-                </div>
-            </div>
-
-            {successMsg && <div className="toast-message">{successMsg}</div>}
-
-            {showModal && (
-                <div className="modal-overlay"
-                    style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        width: "100vw",
-                        height: "100vh",
-                        backgroundColor: "rgba(9, 13, 22, 0.75)",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        zIndex: 10000,
-                        backdropFilter: "blur(8px)",
-                        WebkitBackdropFilter: "blur(8px)",
-                    }}
-                    onClick={() => setShowModal(false)}
-                >
-                    <div className="modal-content glass-panel"
-                        style={{
-                            width: "90%",
-                            maxWidth: "460px",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "1.25rem",
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <h3>Create New Community</h3>
-
-                        <input
-                            type="text"
-                            placeholder="Community Name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                        />
-
-                        <textarea
-                            placeholder="Description (optional)"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            style={{ minHeight: "100px", resize: "vertical" }}
-                        />
-
-                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "0.5rem" }}>
-                            <button className="secondary-btn" onClick={() => setShowModal(false)}>
-                                Cancel
-                            </button>
-                            <button className="primary-btn" onClick={handleCreateCommunity}>
-                                Create
-                            </button>
+                  </div>
+                  <div className="notifications-list">
+                    {notifications.length === 0 ? (
+                      <div className="no-notifications">No notifications yet</div>
+                    ) : (
+                      notifications.map((n) => (
+                        <div
+                          key={n._id}
+                          className={`notification-item ${!n.isRead ? "unread" : ""}`}
+                          onClick={() => handleNotificationClick(n)}
+                        >
+                          <div className="notification-details">
+                            <p>{n.message}</p>
+                            <span>{formatRelativeTime(n.createdAt)}</span>
+                          </div>
+                          {!n.isRead && <div className="mark-read-indicator" />}
                         </div>
-                    </div>
+                      ))
+                    )}
+                  </div>
                 </div>
+              </>
             )}
-        </nav>
-    );
+          </div>
+
+          <button type="button" className="secondary-btn" onClick={logout}>
+            Logout
+          </button>
+        </div>
+
+        <div
+          className="avatar"
+          onClick={() => navigate("/profile")}
+          title="Profile"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === "Enter" && navigate("/profile")}
+        >
+          {user?.avatar ? <img src={user.avatar} alt="" /> : getInitials(user?.username)}
+        </div>
+      </div>
+
+      {showModal && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal-content glass-panel" onClick={(e) => e.stopPropagation()}>
+            <h3>Create New Community</h3>
+            <p className="modal-desc">Start a space for people who share your niche interests.</p>
+            <label className="field-label">Name</label>
+            <input
+              type="text"
+              placeholder="e.g. Indie Game Devs"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <label className="field-label">Description</label>
+            <textarea
+              placeholder="What is this community about?"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              style={{ minHeight: "90px", resize: "vertical" }}
+            />
+            <div className="modal-actions">
+              <button type="button" className="secondary-btn" onClick={() => setShowModal(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={handleCreateCommunity}
+                disabled={creating}
+              >
+                {creating ? "Creating..." : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </nav>
+  );
 };
 
 export default Navbar;

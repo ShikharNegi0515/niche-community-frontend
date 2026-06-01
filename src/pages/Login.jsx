@@ -1,94 +1,84 @@
 import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext.jsx";
-import { BASE_URL } from "../components/utils.js"; 
+import { apiRequest } from "../api/client.js";
+import { useToast } from "../context/ToastContext.jsx";
 
 const Login = () => {
-    const navigate = useNavigate();
-    const { setUser } = useContext(AuthContext);
-    const [formData, setFormData] = useState({ email: "", password: "" });
-    const [errorMsg, setErrorMsg] = useState("");
-    const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { setUser } = useContext(AuthContext);
+  const { showToast } = useToast();
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [errorMsg, setErrorMsg] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    const handleChange = (e) =>
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e) =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setErrorMsg("");
-        setLoading(true);
-        try {
-            const res = await fetch(`${BASE_URL}/api/auth/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
-            });
-            const data = await res.json();
-            if (res.ok) {
-                setUser(data.user);
-                localStorage.setItem("user", JSON.stringify(data.user));
-                localStorage.setItem("token", data.token); // store token for auth requests
-                navigate("/dashboard");
-            } else {
-                setErrorMsg(data.message || "Invalid credentials");
-            }
-        } catch (err) {
-            console.error(err);
-            setErrorMsg("Network error. Please try again.");
-        } finally {
-            setLoading(false);
-        }
-    };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMsg("");
+    setLoading(true);
+    try {
+      const data = await apiRequest("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify(formData),
+      });
+      setUser(data.user);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("token", data.token);
+      showToast(`Welcome back, ${data.user.username}!`, "success");
+      navigate("/dashboard");
+    } catch (err) {
+      setErrorMsg(err.message || "Invalid credentials");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <div className="auth-page">
-            <div className="auth-card glass-panel">
-                <h2>Welcome Back</h2>
-                <p>Enter your credentials to access your NicheSphere communities</p>
-                
-                {errorMsg && (
-                    <div style={{
-                        background: "rgba(239, 68, 68, 0.1)",
-                        border: "1px solid rgba(239, 68, 68, 0.2)",
-                        color: "var(--danger)",
-                        padding: "0.75rem",
-                        borderRadius: "10px",
-                        fontSize: "0.9rem",
-                        marginBottom: "1rem",
-                        textAlign: "center"
-                    }}>
-                        ⚠️ {errorMsg}
-                    </div>
-                )}
+  return (
+    <div className="auth-page">
+      <div className="auth-card glass-panel">
+        <div className="auth-brand">🛸 NicheSphere</div>
+        <h2>Welcome back</h2>
+        <p>Sign in to your communities and conversations</p>
 
-                <form onSubmit={handleSubmit}>
-                    <input
-                        type="email"
-                        name="email"
-                        placeholder="Email Address"
-                        value={formData.email}
-                        onChange={handleChange}
-                        required
-                    />
-                    <input
-                        type="password"
-                        name="password"
-                        placeholder="Password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        required
-                    />
-                    <button type="submit" className="primary-btn" disabled={loading} style={{ justifyContent: "center" }}>
-                        {loading ? "Authenticating..." : "Sign In"}
-                    </button>
-                </form>
-                <p style={{ marginTop: "1.5rem", marginBottom: 0 }}>
-                    Don't have an account?{" "}
-                    <span onClick={() => navigate("/signup")}>Sign up</span>
-                </p>
-            </div>
-        </div>
-    );
+        {errorMsg && <div className="alert alert-error">⚠️ {errorMsg}</div>}
+
+        <form onSubmit={handleSubmit}>
+          <label className="field-label" htmlFor="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            placeholder="you@example.com"
+            value={formData.email}
+            onChange={handleChange}
+            autoComplete="email"
+            required
+          />
+          <label className="field-label" htmlFor="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            name="password"
+            placeholder="••••••••"
+            value={formData.password}
+            onChange={handleChange}
+            autoComplete="current-password"
+            required
+          />
+          <button type="submit" className="primary-btn" disabled={loading}>
+            {loading ? "Signing in..." : "Sign in"}
+          </button>
+        </form>
+        <p className="auth-footer">
+          Don&apos;t have an account?{" "}
+          <span onClick={() => navigate("/signup")}>Create one</span>
+        </p>
+      </div>
+    </div>
+  );
 };
 
 export default Login;
